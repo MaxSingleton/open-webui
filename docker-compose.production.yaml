@@ -1,0 +1,74 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/:/etc/nginx/conf.d/:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - open-webui
+    networks:
+      - web
+
+  open-webui:
+    build:
+      context: .
+      args:
+        OLLAMA_BASE_URL: 'http://192.168.86.21:11434'
+      dockerfile: Dockerfile
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    container_name: open-webui
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - 'WEBUI_NAME=Hardhat-AI'
+      - 'OLLAMA_BASE_URL=http://192.168.86.21:11434'
+      - 'WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}'
+      - 'ADMIN_USER_EMAIL=${ADMIN_USER_EMAIL}'
+      - 'ADMIN_USER_PASSWORD=${ADMIN_USER_PASSWORD}'
+      - 'CODE_INTERPRETER_ENGINE=jupyter'
+      - 'CODE_INTERPRETER_JUPYTER_URL=http://localhost:8889'
+      - 'ENABLE_OAUTH_SIGNUP=${ENABLE_OAUTH_SIGNUP}'
+      - 'GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
+      - 'GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}'
+      - 'GOOGLE_OAUTH_SCOPE=${GOOGLE_OAUTH_SCOPE}'
+      - 'GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}'
+      - 'GOOGLE_DRIVE_CLIENT_ID=${GOOGLE_DRIVE_CLIENT_ID}'
+      - 'GOOGLE_DRIVE_API_KEY=${GOOGLE_DRIVE_API_KEY}'
+    #  - 'CODE_INTERPRETER_JUPYTER_AUTH='
+    #  - 'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN='
+    #  - 'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD='
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "8888:8888"  # Expose Jupyter Notebook port
+    networks:
+      - web
+
+
+  # ollama:
+  #   image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+  #   container_name: ollama
+  #   runtime: nvidia  # Enable NVIDIA runtime
+  #   environment:
+  #     - NVIDIA_VISIBLE_DEVICES=all  # Expose GPU inside the container
+  #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  #     - OLLAMA_USE_CUDA=1  # Force CUDA usage
+  #   volumes:
+  #     - ollama:/root/.ollama
+  #   restart: unless-stopped
+  #   networks:
+  #     - web
+
+volumes:
+  ollama: {}
+  open-webui: {}
+
+networks:
+  web:
+    driver: bridge
