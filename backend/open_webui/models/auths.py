@@ -1,6 +1,7 @@
 import logging
 import uuid
 from typing import Optional
+from fastapi import Request
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.users import UserModel, Users
@@ -19,6 +20,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 class Auth(Base):
     __tablename__ = "auth"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(String, primary_key=True)
     email = Column(String)
@@ -127,8 +129,9 @@ class AuthsTable:
             else:
                 return None
 
-    def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
-        log.info(f"authenticate_user: {email}")
+    def authenticate_user(self, email: str, password: str, request: Optional[Request] = None) -> Optional[UserModel]:
+        ip = request.client.host if request else "unknown"
+        log.info(f"authenticate_user: {email} from IP: {ip}")
         try:
             with get_db() as db:
                 auth = db.query(Auth).filter_by(email=email, active=True).first()
@@ -142,6 +145,7 @@ class AuthsTable:
                     return None
         except Exception:
             return None
+
 
     def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_api_key: {api_key}")
