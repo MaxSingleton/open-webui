@@ -22,9 +22,11 @@
 		config,
 		isApp
 	} from '$lib/stores';
-	import { onMount, getContext, tick, onDestroy } from 'svelte';
+import { onMount, getContext, tick, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+const i18n = getContext('i18n');
+// Controls expansion state of the Artifacts folder
+let artifactsOpen = false;
 
 	import {
 		deleteChatById,
@@ -42,7 +44,8 @@
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -446,7 +449,7 @@
 		});
 
 		if (res) {
-			$socket.emit('join-channels', { auth: { token: $user.token } });
+			$socket.emit('join-channels', { auth: { token: $user?.token } });
 			await initChannels();
 			showCreateChannel = false;
 		}
@@ -607,7 +610,22 @@
 					</div>
 				</a>
 			</div>
-		{/if}
+        {/if}
+        <!-- Artifacts saved by user -->  
+        <Folder collapsible bind:open={artifactsOpen} className="px-2 mt-0.5" name={$i18n.t('Artifacts')}>
+          {#if $artifacts.length > 0}
+            {#each $artifacts as artifact (artifact.id)}
+              <div class="ml-3 pl-1 mt-1 truncate hover:bg-gray-100 dark:hover:bg-gray-900 p-1 rounded cursor-pointer"
+                   on:click={() => openArtifactDetail(artifact)}>
+                {artifact.name}
+              </div>
+            {/each}
+          {:else}
+            <div class="ml-3 pl-1 mt-1 text-xs text-gray-500">
+              {$i18n.t('No artifacts saved')}
+            </div>
+          {/if}
+        </Folder>
 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
@@ -627,13 +645,13 @@
 				? 'opacity-20'
 				: ''}"
 		>
-			{#if $config?.features?.enable_channels && ($user.role === 'admin' || $channels.length > 0) && !search}
+			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0) && !search}
 				<Folder
 					className="px-2 mt-0.5"
 					name={$i18n.t('Channels')}
 					dragAndDrop={false}
 					onAdd={async () => {
-						if ($user.role === 'admin') {
+						if ($user?.role === 'admin') {
 							await tick();
 
 							setTimeout(() => {
@@ -891,9 +909,9 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user !== null}
 					<UserMenu
-						role={$user.role}
+						role={$user?.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);
@@ -908,12 +926,12 @@
 						>
 							<div class=" self-center mr-3">
 								<img
-									src={$user.profile_image_url}
+									src={$user?.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
+							<div class=" self-center font-medium">{$user?.name}</div>
 						</button>
 					</UserMenu>
 				{/if}
