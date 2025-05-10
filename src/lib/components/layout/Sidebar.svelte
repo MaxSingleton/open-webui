@@ -22,9 +22,11 @@
 		config,
 		isApp
 	} from '$lib/stores';
-	import { onMount, getContext, tick, onDestroy } from 'svelte';
+import { onMount, getContext, tick, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+const i18n = getContext('i18n');
+// Controls expansion state of the Artifacts folder
+let artifactsOpen = false;
 
 	import {
 		deleteChatById,
@@ -42,7 +44,8 @@
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -607,7 +610,22 @@
 					</div>
 				</a>
 			</div>
-		{/if}
+        {/if}
+        <!-- Artifacts saved by user -->  
+        <Folder collapsible bind:open={artifactsOpen} className="px-2 mt-0.5" name={$i18n.t('Artifacts')}>
+          {#if $artifacts.length > 0}
+            {#each $artifacts as artifact (artifact.id)}
+              <div class="ml-3 pl-1 mt-1 truncate hover:bg-gray-100 dark:hover:bg-gray-900 p-1 rounded cursor-pointer"
+                   on:click={() => openArtifactDetail(artifact)}>
+                {artifact.name}
+              </div>
+            {/each}
+          {:else}
+            <div class="ml-3 pl-1 mt-1 text-xs text-gray-500">
+              {$i18n.t('No artifacts saved')}
+            </div>
+          {/if}
+        </Folder>
 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}

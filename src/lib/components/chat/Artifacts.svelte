@@ -4,10 +4,13 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { chatId, settings, showArtifacts, showControls } from '$lib/stores';
-	import XMark from '../icons/XMark.svelte';
+import { chatId, settings, showArtifacts, showControls } from '$lib/stores';
+import { addArtifact } from '$lib/stores/artifacts';
+import { v4 as uuidv4 } from 'uuid';
+import XMark from '../icons/XMark.svelte';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
-	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
+import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
+import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
@@ -170,7 +173,7 @@
 		});
 	};
 
-	const showFullScreen = () => {
+const showFullScreen = () => {
 		if (iframeElement.requestFullscreen) {
 			iframeElement.requestFullscreen();
 		} else if (iframeElement.webkitRequestFullscreen) {
@@ -179,6 +182,24 @@
 			iframeElement.msRequestFullscreen();
 		}
 	};
+
+/**
+ * Prompt to save the current artifact version to the sidebar list.
+ */
+function saveArtifact() {
+  const name = prompt(i18n.t('Enter a name for this artifact'),
+    `Artifact ${new Date().toLocaleString()}`
+  );
+  if (!name) return;
+  const artifact = {
+    id: uuidv4(),
+    name,
+    content: contents[selectedContentIdx].content,
+    createdAt: Date.now()
+  };
+  addArtifact(artifact);
+  toast.success(i18n.t('Artifact saved'));
+}
 
 	onMount(() => {});
 </script>
@@ -265,16 +286,25 @@
 							}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 						>
 
-						{#if contents[selectedContentIdx].type === 'iframe'}
-							<Tooltip content={$i18n.t('Open in full screen')}>
+							{#if contents[selectedContentIdx].type === 'iframe'}
+								<Tooltip content={$i18n.t('Open in full screen')}>
+									<button
+										class="bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
+										on:click={showFullScreen}
+									>
+										<ArrowsPointingOut className="size-3.5" />
+									</button>
+								</Tooltip>
+							{/if}
+							<!-- Save artifact button -->
+							<Tooltip content={$i18n.t('Save Artifact')}>
 								<button
-									class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
-									on:click={showFullScreen}
+									class="bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
+									on:click={saveArtifact}
 								>
-									<ArrowsPointingOut className="size-3.5" />
+									<ArrowDownTray className="size-3.5" />
 								</button>
 							</Tooltip>
-						{/if}
 					</div>
 				</div>
 
