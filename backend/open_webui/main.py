@@ -1482,6 +1482,11 @@ async def healthcheck_with_db():
     Session.execute(text("SELECT 1;")).all()
     return {"status": True}
 
+# Redirect legacy `/login` path to the new auth page
+@app.get("/login", include_in_schema=False)
+async def login_redirect():
+    return RedirectResponse("/auth")
+
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")

@@ -12,7 +12,9 @@ ARG GID=0
 
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
+# Build front-end: increase Node.js heap size to avoid OOM in large builds
 ARG BUILD_HASH
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 WORKDIR /app
 COPY package.json package-lock.json ./
