@@ -1,0 +1,27 @@
+version: "3.9"
+services:
+  open-webui:
+    container_name: open-webui-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount only the backend code to preserve the built frontend in /app/build
+      - ./backend:/app/backend:delegated
+      - open-webui:/app/backend/data
+    # Disable Ollama container dependency for local dev (using OpenAI API only)
+    depends_on: []
+    ports:
+      - "${OPEN_WEBUI_PORT-3000}:8080"
+    environment:
+      # Development mode settings
+      - ENV=dev
+      - WEBUI_SECRET_KEY=dev-secret-key
+      # Disable Ollama API integration
+      - ENABLE_OLLAMA_API=false
+      - USE_OLLAMA_DOCKER=false
+    command: >
+      uvicorn open_webui.main:app
+      --host 0.0.0.0
+      --port 8080
+      --reload
