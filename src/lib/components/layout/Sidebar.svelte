@@ -1083,18 +1083,24 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
   >
     <div class="flex justify-center items-center border-b px-4 py-2 space-x-4">
       <button
-        class="px-3 py-1 rounded-t-lg"
+        class="px-3 py-1 rounded-t-lg text-gray-500 dark:text-gray-400"
         class:font-semibold={viewMode === 'artifact'}
         class:bg-gray-200={viewMode === 'artifact'}
-        on:click={() => viewMode = 'artifact'}
+        class:dark:bg-gray-700={viewMode === 'artifact'}
+        class:text-gray-900={viewMode === 'artifact'}
+        class:dark:text-gray-100={viewMode === 'artifact'}
+        on:click={() => (viewMode = 'artifact')}
       >
         {$i18n.t('Artifact')}
       </button>
       <button
-        class="px-3 py-1 rounded-t-lg"
+        class="px-3 py-1 rounded-t-lg text-gray-500 dark:text-gray-400"
         class:font-semibold={viewMode === 'chat'}
         class:bg-gray-200={viewMode === 'chat'}
-        on:click={() => viewMode = 'chat'}
+        class:dark:bg-gray-700={viewMode === 'chat'}
+        class:text-gray-900={viewMode === 'chat'}
+        class:dark:text-gray-100={viewMode === 'chat'}
+        on:click={() => (viewMode = 'chat')}
       >
         {$i18n.t('Chat')}
       </button>
