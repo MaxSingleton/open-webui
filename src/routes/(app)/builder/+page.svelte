@@ -21,7 +21,7 @@
   });
 </script>
 
-<div class="flex h-full">
+<div class="flex h-full w-full">
   <div class="w-1/3 border-r">
     {#if chatId}
       <Chat chatIdProp={chatId} />
