@@ -28,26 +28,31 @@ const i18n = getContext('i18n');
 // Controls expansion state of the Artifacts folder
 let artifactsOpen = false;
 
-	import {
-		deleteChatById,
-		getChatList,
-		getAllTags,
-		getChatListBySearchText,
-		createNewChat,
-		getPinnedChatList,
-		toggleChatPinnedStatusById,
-		getChatPinnedStatusById,
-		getChatById,
-		updateChatFolderIdById,
-		importChat
-	} from '$lib/apis/chats';
-	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
+    import {
+        deleteChatById,
+        getChatList,
+        getAllTags,
+        getChatListBySearchText,
+        createNewChat,
+        getPinnedChatList,
+        toggleChatPinnedStatusById,
+        getChatPinnedStatusById,
+        getChatById,
+        updateChatFolderIdById,
+        importChat,
+        getAllChats
+    } from '$lib/apis/chats';
+    import fileSaver from 'file-saver';
+    const { saveAs } = fileSaver;
+import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
-import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
+    import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+    // Chats created from Builder will live in the 'Artifacts' chat folder
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
+import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
+import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
@@ -79,8 +84,22 @@ import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
-	let folders = {};
-	let newFolderId = null;
+    // Mapping of user-defined chat folders
+    let folders = {};
+    let newFolderId = null;
+    // Builder chats folder entry
+    let artifactFolder: any = null;
+
+    // Derive the 'Artifacts' folder from chat folders
+    $: artifactFolder = Object.values(folders).find((f: any) => f.name === 'Artifacts') || null;
+    // Exclude Artifacts from the general chat history folders
+    let chatFolders: Record<string, any> = {};
+    $: {
+        chatFolders = { ...folders };
+        if (artifactFolder && chatFolders[artifactFolder.id]) {
+            delete chatFolders[artifactFolder.id];
+        }
+    }
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -393,8 +412,12 @@ import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 			}
 		});
 
-		await initChannels();
-		await initChatList();
+        await initChannels();
+        await initChatList();
+        // refresh folder list whenever a new chat is created (e.g. Builder chats)
+        chatId.subscribe(() => {
+          initFolders();
+        });
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
@@ -427,9 +450,37 @@ import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
-	});
+    });
+    // Handler to export all chats in main Chats folder
+    async function exportAllChatsHandler() {
+        try {
+            const allChats = await getAllChats(localStorage.token);
+            const blob = new Blob([JSON.stringify(allChats, null, 2)], { type: 'application/json' });
+            saveAs(blob, `chats-export-${Date.now()}.json`);
+        } catch (err) {
+            toast.error(`${err}`);
+        }
+    }
+    // Handler to delete all chats in main Chats folder
+    async function clearAllChatsHandler() {
+        try {
+            const allChats = await getAllChats(localStorage.token);
+            const artifactId = artifactFolder?.id;
+            for (const chat of allChats) {
+                if (artifactId && chat.folder_id === artifactId) {
+                    // skip chats in Artifacts folder
+                    continue;
+                }
+                await deleteChatById(localStorage.token, chat.id).catch((err) => {
+                    console.error('Error deleting chat', chat.id, err);
+                });
+            }
+            toast.success($i18n.t('All chats deleted'));
+        } catch (err) {
+            toast.error(`${err}`);
+        }
+    }
 </script>
-
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
 	on:change={async () => {
@@ -633,18 +684,51 @@ import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
                 </div>
             </a>
         </div>
-        <!-- Artifacts saved by user -->  
-        <Folder collapsible bind:open={artifactsOpen} className="px-2 mt-0.5" name={$i18n.t('Artifacts')}>
-          {#if $artifacts.length > 0}
-            {#each $artifacts as artifact (artifact.id)}
-              <div class="ml-3 pl-1 mt-1 truncate hover:bg-gray-100 dark:hover:bg-gray-900 p-1 rounded cursor-pointer"
-                   on:click={() => openArtifactDetail(artifact)}>
-                {artifact.name}
-              </div>
+        <!-- Builder chats stored in 'Artifacts' folder -->
+        <Folder
+          collapsible
+          bind:open={artifactsOpen}
+          className="px-2 mt-0.5"
+          name={$i18n.t('Artifacts')}
+        >
+          <!-- Dropdown menu for folder actions (only Clear and Export) -->
+          <FolderMenu
+            slot="menu"
+            showRename={false}
+            showDelete={false}
+            showExport={true}
+            showClear={true}
+            on:clear={async () => {
+              if (!artifactFolder) return;
+              try {
+                await clearFolderChats(localStorage.token, artifactFolder.id);
+                await initFolders();
+                await initChatList();
+              } catch (err) {
+                toast.error(`${err}`);
+              }
+            }}
+          >
+            <button class="p-1" on:pointerup|stopPropagation>
+              <EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+            </button>
+          </FolderMenu>
+          {#if artifactFolder && artifactFolder.items?.chats?.length > 0}
+            {#each artifactFolder.items.chats as chat (chat.id)}
+              <ChatItem
+                id={chat.id}
+                title={chat.title}
+                selected={selectedChatId === chat.id}
+                on:select={() => {
+                  selectedChatId = chat.id;
+                  chatId.set(chat.id);
+                  if ($mobile) showSidebar.set(false);
+                }}
+              />
             {/each}
           {:else}
             <div class="ml-3 pl-1 mt-1 text-xs text-gray-500">
-              {$i18n.t('No artifacts saved')}
+              {$i18n.t('No chats in Artifacts')}
             </div>
           {/if}
         </Folder>
@@ -698,10 +782,6 @@ import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 				collapsible={!search}
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
-				onAdd={() => {
-					createFolder();
-				}}
-				onAddLabel={$i18n.t('New Folder')}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
@@ -748,9 +828,25 @@ import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 						if (res) {
 							await initFolders();
 						}
-					}
-				}}
+						}
+					}}
 			>
+            <!-- Main Chats folder menu: export only -->
+            <FolderMenu
+                slot="menu"
+                showNewFolder={true}
+                showRename={false}
+                showDelete={false}
+                showClear={true}
+                showExport={true}
+                on:add={() => { createFolder(); }}
+                on:clear={async () => { await clearAllChatsHandler(); await initChatList(); }}
+                on:export={exportAllChatsHandler}
+            >
+                <button class="p-1" on:pointerup|stopPropagation>
+                    <EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+                </button>
+            </FolderMenu>
 				{#if $temporaryChatEnabled}
 					<div class="absolute z-40 w-full h-full flex justify-center"></div>
 				{/if}
@@ -831,9 +927,9 @@ import { artifacts, openArtifactDetail } from '$lib/stores/artifacts';
 					</div>
 				{/if}
 
-				{#if !search && folders}
-					<Folders
-						{folders}
+					{#if !search && folders}
+						<Folders
+							folders={chatFolders}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
