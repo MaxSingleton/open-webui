@@ -56,7 +56,6 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
     import Chat from '$lib/components/chat/Chat.svelte';
     import Artifacts from '$lib/components/chat/Artifacts.svelte';
     import { convertMessagesToHistory } from '$lib/utils';
-    import Artifacts from '$lib/components/chat/Artifacts.svelte';
     // State for Artifact builder modal
     let artifactChatId: string = '';
     let modalChat: any = null;
