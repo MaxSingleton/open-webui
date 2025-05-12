@@ -54,6 +54,7 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
     // Modal for displaying Artifacts builder chats
     import Modal from '$lib/components/common/Modal.svelte';
     import Chat from '$lib/components/chat/Chat.svelte';
+    import Artifacts from '$lib/components/chat/Artifacts.svelte';
     // State for Artifact builder modal
     let artifactChatId: string = '';
     let modalChat: any = null;
@@ -1107,9 +1108,8 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
     </div>
     {#if viewMode === 'artifact'}
       {#if modalChat}
-        <pre class="p-4 overflow-auto h-[calc(75vh-4rem)] bg-gray-100 text-sm">
-          {JSON.stringify(modalChat, null, 2)}
-        </pre>
+        <!-- Render using existing Artifacts component -->
+        <Artifacts overlay={false} history={modalChat} />
       {:else}
         <div class="p-4 text-gray-500">{$i18n.t('No artifact data')}</div>
       {/if}
