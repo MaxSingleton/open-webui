@@ -61,10 +61,8 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
         artifactChatId = id;
         showBuilderModal = true;
     }
-    function closeBuilderModal() {
-        showBuilderModal = false;
-        artifactChatId = '';
-    }
+    // Reset artifactChatId when modal closes
+    $: if (!showBuilderModal) artifactChatId = '';
 import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
 import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -1071,10 +1069,9 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
   <!-- Builder Artifact Modal -->
   <!-- Popup at 50vw x 75vh, centered -->
   <Modal
-    show={showBuilderModal}
+    bind:show={showBuilderModal}
     modalWidth="50vw"
     modalHeight="75vh"
-    on:close={closeBuilderModal}
   >
     {#if artifactChatId}
       <Chat chatIdProp={artifactChatId} disableLayout={true} />
