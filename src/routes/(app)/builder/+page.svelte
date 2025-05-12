@@ -25,7 +25,7 @@
 <div class="flex flex-1 h-full w-full flex-row">
   <div class="w-1/3 border-r h-full flex flex-col">
     {#if chatId}
-      <Chat chatIdProp={chatId} />
+      <Chat chatIdProp={chatId} disableLayout={true} />
     {/if}
   </div>
   <div class="w-2/3 h-full flex flex-col">
