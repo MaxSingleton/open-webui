@@ -11,7 +11,8 @@
   const unsub = selectedArtifact.subscribe(v => artifact = v);
 
   onMount(async () => {
-    const chat = await createNewChat(localStorage.token);
+    // Create a new chat session for Builder
+    const chat = await createNewChat(localStorage.token, {});
     chatId = chat.id;
     storeChatId.set(chatId);
   });
