@@ -1873,30 +1873,33 @@ export let disableLayout = false;
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
 
-		if (!$temporaryChatEnabled) {
-			chat = await createNewChat(localStorage.token, {
-				id: _chatId,
-				title: $i18n.t('New Chat'),
-				models: selectedModels,
-				system: $settings.system ?? undefined,
-				params: params,
-				history: history,
-				messages: createMessagesList(history, history.currentId),
-				tags: [],
-				timestamp: Date.now()
-			});
+        if (!$temporaryChatEnabled) {
+            if (!disableLayout) {
+                // Create new chat only when not in Builder tool (disableLayout true skips)
+                chat = await createNewChat(localStorage.token, {
+                    id: _chatId,
+                    title: $i18n.t('New Chat'),
+                    models: selectedModels,
+                    system: $settings.system ?? undefined,
+                    params: params,
+                    history: history,
+                    messages: createMessagesList(history, history.currentId),
+                    tags: [],
+                    timestamp: Date.now()
+                });
 
-			_chatId = chat.id;
-			await chatId.set(_chatId);
+                _chatId = chat.id;
+                await chatId.set(_chatId);
 
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			currentChatPage.set(1);
+                await chats.set(await getChatList(localStorage.token, $currentChatPage));
+                currentChatPage.set(1);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-		} else {
-			_chatId = 'local';
-			await chatId.set('local');
-		}
+                window.history.replaceState(history.state, '', `/c/${_chatId}`);
+            }
+        } else {
+            _chatId = 'local';
+            await chatId.set('local');
+        }
 		await tick();
 
 		return _chatId;
