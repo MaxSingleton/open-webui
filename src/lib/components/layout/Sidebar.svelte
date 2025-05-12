@@ -56,13 +56,21 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
     import Chat from '$lib/components/chat/Chat.svelte';
     // State for Artifact builder modal
     let artifactChatId: string = '';
+    let modalChat: any = null;
+    let viewMode: 'artifact' | 'chat' = 'artifact';
     let showBuilderModal: boolean = false;
-    function openArtifactModal(id: string) {
+    async function openArtifactModal(id: string) {
         artifactChatId = id;
+        // load full chat for code view
+        modalChat = await getChatById(localStorage.token, id).catch(() => null);
+        viewMode = 'artifact';
         showBuilderModal = true;
     }
-    // Reset artifactChatId when modal closes
-    $: if (!showBuilderModal) artifactChatId = '';
+    // Reset when modal closes
+    $: if (!showBuilderModal) {
+        artifactChatId = '';
+        modalChat = null;
+    }
 import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
 import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -1067,13 +1075,39 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
   </div>
 
   <!-- Builder Artifact Modal -->
-  <!-- Popup at 50vw x 75vh, centered -->
+  <!-- Popup at 50vw x 75vh with toggle between Artifact view and Chat view -->
   <Modal
     bind:show={showBuilderModal}
     modalWidth="50vw"
     modalHeight="75vh"
   >
-    {#if artifactChatId}
+    <div class="flex justify-center items-center border-b px-4 py-2 space-x-4">
+      <button
+        class="px-3 py-1 rounded-t-lg"
+        class:font-semibold={viewMode === 'artifact'}
+        class:bg-gray-200={viewMode === 'artifact'}
+        on:click={() => viewMode = 'artifact'}
+      >
+        {$i18n.t('Artifact')}
+      </button>
+      <button
+        class="px-3 py-1 rounded-t-lg"
+        class:font-semibold={viewMode === 'chat'}
+        class:bg-gray-200={viewMode === 'chat'}
+        on:click={() => viewMode = 'chat'}
+      >
+        {$i18n.t('Chat')}
+      </button>
+    </div>
+    {#if viewMode === 'artifact'}
+      {#if modalChat}
+        <pre class="p-4 overflow-auto h-[calc(75vh-4rem)] bg-gray-100 text-sm">
+          {JSON.stringify(modalChat, null, 2)}
+        </pre>
+      {:else}
+        <div class="p-4 text-gray-500">{$i18n.t('No artifact data')}</div>
+      {/if}
+    {:else}
       <Chat chatIdProp={artifactChatId} disableLayout={true} />
     {/if}
   </Modal>
