@@ -119,7 +119,11 @@ export const splitStream = (splitOn) => {
 };
 
 export const convertMessagesToHistory = (messages) => {
-	const history = {
+  // If messages is not an array, treat as empty
+  if (!Array.isArray(messages)) {
+    messages = [];
+  }
+  const history = {
 		messages: {},
 		currentId: null
 	};

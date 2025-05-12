@@ -22,13 +22,13 @@
   });
 </script>
 
-<div class="flex h-full w-full">
-  <div class="w-1/3 border-r">
+<div class="flex flex-1 h-full w-full flex-row">
+  <div class="w-1/3 border-r h-full flex flex-col">
     {#if chatId}
       <Chat chatIdProp={chatId} />
     {/if}
   </div>
-  <div class="w-2/3">
+  <div class="w-2/3 h-full flex flex-col">
     {#if artifact}
       <div class="flex flex-col h-full bg-white dark:bg-gray-900">
         <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
