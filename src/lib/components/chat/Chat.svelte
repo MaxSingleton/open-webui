@@ -92,6 +92,7 @@
 export let chatIdProp = '';
 // Disable sidebar-based width/translate adjustments (e.g. in Builder page)
 export let disableLayout = false;
+// If true, internal pane-split for controls is skipped/hid by sizing
 
 	let loading = false;
 
@@ -1968,7 +1969,7 @@ export let disableLayout = false;
 		{/if}
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
-			<Pane defaultSize={50} class="h-full flex relative max-w-full flex-col">
+        <Pane defaultSize={disableLayout ? 100 : 50} class="h-full flex relative max-w-full flex-col">
 				<Navbar
 					bind:this={navbarElement}
 					chat={{
