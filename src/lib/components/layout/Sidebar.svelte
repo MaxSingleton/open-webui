@@ -49,8 +49,22 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
 
     import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
     // Chats created from Builder will live in the 'Artifacts' chat folder
-	import UserMenu from './Sidebar/UserMenu.svelte';
-	import ChatItem from './Sidebar/ChatItem.svelte';
+    import UserMenu from './Sidebar/UserMenu.svelte';
+    import ChatItem from './Sidebar/ChatItem.svelte';
+    // Modal for displaying Artifacts builder chats
+    import Modal from '$lib/components/common/Modal.svelte';
+    import Chat from '$lib/components/chat/Chat.svelte';
+    // State for Artifact builder modal
+    let artifactChatId: string = '';
+    let showBuilderModal: boolean = false;
+    function openArtifactModal(id: string) {
+        artifactChatId = id;
+        showBuilderModal = true;
+    }
+    function closeBuilderModal() {
+        showBuilderModal = false;
+        artifactChatId = '';
+    }
 import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
 import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -715,16 +729,12 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
           </FolderMenu>
           {#if artifactFolder && artifactFolder.items?.chats?.length > 0}
             {#each artifactFolder.items.chats as chat (chat.id)}
-              <ChatItem
-                id={chat.id}
-                title={chat.title}
-                selected={selectedChatId === chat.id}
-                on:select={() => {
-                  selectedChatId = chat.id;
-                  chatId.set(chat.id);
-                  if ($mobile) showSidebar.set(false);
-                }}
-              />
+              <div
+                class="relative px-[11px] py-[6px] whitespace-nowrap overflow-hidden text-ellipsis rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer"
+                on:click={() => openArtifactModal(chat.id)}
+              >
+                {chat.title}
+              </div>
             {/each}
           {:else}
             <div class="ml-3 pl-1 mt-1 text-xs text-gray-500">
@@ -1056,7 +1066,20 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
 			</div>
 		</div>
 	</div>
-</div>
+  </div>
+
+  <!-- Builder Artifact Modal -->
+  <!-- Popup at 50vw x 75vh, centered -->
+  <Modal
+    show={showBuilderModal}
+    modalWidth="50vw"
+    modalHeight="75vh"
+    on:close={closeBuilderModal}
+  >
+    {#if artifactChatId}
+      <Chat chatIdProp={artifactChatId} disableLayout={true} />
+    {/if}
+  </Modal>
 
 <style>
 	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
