@@ -55,15 +55,24 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
     import Modal from '$lib/components/common/Modal.svelte';
     import Chat from '$lib/components/chat/Chat.svelte';
     import Artifacts from '$lib/components/chat/Artifacts.svelte';
+    import { convertMessagesToHistory } from '$lib/utils';
+    import Artifacts from '$lib/components/chat/Artifacts.svelte';
     // State for Artifact builder modal
     let artifactChatId: string = '';
     let modalChat: any = null;
+    let modalHistory = { messages: {}, currentId: null };
     let viewMode: 'artifact' | 'chat' = 'artifact';
     let showBuilderModal: boolean = false;
     async function openArtifactModal(id: string) {
         artifactChatId = id;
-        // load full chat for code view
-        modalChat = await getChatById(localStorage.token, id).catch(() => null);
+        // load full chat data
+        const chatData = await getChatById(localStorage.token, id).catch(() => null);
+        if (!chatData) {
+            toast.error($i18n.t('Failed to load artifact chat'));
+            return;
+        }
+        modalChat = chatData;
+        modalHistory = convertMessagesToHistory(chatData);
         viewMode = 'artifact';
         showBuilderModal = true;
     }
@@ -71,6 +80,7 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
     $: if (!showBuilderModal) {
         artifactChatId = '';
         modalChat = null;
+        modalHistory = { messages: {}, currentId: null };
     }
 import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
 import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -1109,7 +1119,7 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
     {#if viewMode === 'artifact'}
       {#if modalChat}
         <!-- Render using existing Artifacts component -->
-        <Artifacts overlay={false} history={modalChat} />
+        <Artifacts overlay={false} history={modalHistory} />
       {:else}
         <div class="p-4 text-gray-500">{$i18n.t('No artifact data')}</div>
       {/if}
