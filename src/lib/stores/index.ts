@@ -73,6 +73,10 @@ export const showControls = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
+/**
+ * When true, suppress opening the artifacts/controls pane (used by Builder chat)
+ */
+export const builderMode: Writable<boolean> = writable(false);
 
 export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);

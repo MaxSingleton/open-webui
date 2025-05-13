@@ -3,8 +3,8 @@
 	import { slide } from 'svelte/transition';
 	import { Pane, PaneResizer } from 'paneforge';
 
-	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+import { onDestroy, onMount, tick } from 'svelte';
+import { mobile, showControls, showCallOverlay, showOverview, showArtifacts, builderMode } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
@@ -165,7 +165,7 @@
 								}}
 							/>
 						</div>
-					{:else if $showArtifacts}
+					{:else if $showArtifacts && !$builderMode}
 						<Artifacts {history} />
 					{:else if $showOverview}
 						<Overview
@@ -246,7 +246,7 @@
 									}}
 								/>
 							</div>
-						{:else if $showArtifacts}
+						{:else if $showArtifacts && !$builderMode}
 							<Artifacts {history} overlay={dragged} />
 						{:else if $showOverview}
 							<Overview

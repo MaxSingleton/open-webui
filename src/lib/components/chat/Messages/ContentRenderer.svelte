@@ -3,8 +3,8 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import Markdown from './Markdown.svelte';
-	import { chatId, mobile, settings, showArtifacts, showControls, showOverview } from '$lib/stores';
+import Markdown from './Markdown.svelte';
+import { chatId, mobile, settings, showArtifacts, showControls, showOverview, builderMode } from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
 
@@ -164,7 +164,8 @@
 				($settings?.detectArtifacts ?? true) &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
-				$chatId
+				$chatId &&
+				!$builderMode
 			) {
 				showArtifacts.set(true);
 				showControls.set(true);

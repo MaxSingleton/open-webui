@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import Chat from '$lib/components/chat/Chat.svelte';
   import { createNewChat, updateChatFolderIdById } from '$lib/apis/chats';
   // track chatId in global store (for other UI components)
-  import { chatId as storeChatId } from '$lib/stores';
+  import { chatId as storeChatId, builderMode } from '$lib/stores';
   // For live HTML previews
   import HtmlPreview from '$lib/components/common/HtmlPreview.svelte';
   import { extractPreviewBlocks, type PreviewBlock } from '$lib/utils/htmlPreview';
@@ -26,6 +26,8 @@
   // Ensure builder chats are stored in the Artifacts folder, not the main chat list
   import { getFolders, createNewFolder } from '$lib/apis/folders';
   onMount(async () => {
+    // Indicate we're in Builder mode (suppress controls pane artifacts)
+    builderMode.set(true);
     // Create a new chat session for Builder
     const chat = await createNewChat(localStorage.token, {});
     chatId = chat.id;
@@ -39,6 +41,10 @@
     await updateChatFolderIdById(localStorage.token, chatId, artifact?.id);
     // Update global chatId store (triggers sidebar folder refresh)
     storeChatId.set(chatId);
+  });
+  onDestroy(() => {
+    // Leave Builder mode when unmounting
+    builderMode.set(false);
   });
 
 </script>
