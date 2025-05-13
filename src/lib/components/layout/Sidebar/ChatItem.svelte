@@ -310,7 +310,7 @@
                 ? 'from-gray-100 dark:from-gray-950'
                 : 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2' ? 'right-[8px]' : 'right-0'}
-            top-1/2 -translate-y-1/2 py-1 pr-0.5 mr-1.5 pl-5
+            top-1/2 -translate-y-1/2 py-0 pr-0.5 mr-1.5 pl-5
             bg-linear-to-l from-80% to-transparent"
           on:mouseenter={() => { mouseOver = true; }}
           on:mouseleave={() => { mouseOver = false; }}
