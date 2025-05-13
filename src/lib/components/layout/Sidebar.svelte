@@ -28,7 +28,7 @@ const i18n = getContext('i18n');
 // Controls expansion state of the Artifacts folder
 let artifactsOpen = false;
 
-    import {
+import {
         deleteChatById,
         getChatList,
         getAllTags,
@@ -40,7 +40,8 @@ let artifactsOpen = false;
         getChatById,
         updateChatFolderIdById,
         importChat,
-        getAllChats
+        getAllChats,
+        getChatsByFolderId
     } from '$lib/apis/chats';
     import fileSaver from 'file-saver';
     const { saveAs } = fileSaver;
@@ -122,6 +123,20 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
 
     // Derive the 'Artifacts' folder from chat folders
     $: artifactFolder = Object.values(folders).find((f: any) => f.name === 'Artifacts') || null;
+    // Fetch chats inside the Artifacts folder (reactive to folder and global chats list)
+    // Reactive fetch of artifact chats whenever the folder or chats list changes
+    let artifactChats = [];
+    $: if (artifactFolder && $chats !== null) {
+        (async () => {
+            try {
+                artifactChats = await getChatsByFolderId(localStorage.token, artifactFolder.id);
+            } catch {
+                artifactChats = [];
+            }
+        })();
+    } else {
+        artifactChats = [];
+    }
     // Exclude Artifacts from the general chat history folders
     let chatFolders: Record<string, any> = {};
     $: {
@@ -743,8 +758,8 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
               <EllipsisHorizontal className="size-4" strokeWidth="2.5" />
             </button>
           </FolderMenu>
-          {#if artifactFolder && artifactFolder.items?.chats?.length > 0}
-            {#each artifactFolder.items.chats as chat (chat.id)}
+          {#if artifactChats && artifactChats.filter(c => c.updated_at > c.created_at).length > 0}
+            {#each artifactChats.filter(c => c.updated_at > c.created_at) as chat (chat.id)}
               <div
                 class="relative px-[11px] py-[6px] whitespace-nowrap overflow-hidden text-ellipsis rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer"
                 on:click={() => openArtifactModal(chat.id)}
@@ -972,7 +987,7 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 					<div class="pt-1.5">
 						{#if $chats}
-							{#each $chats as chat, idx}
+                {#each $chats.filter(c => c.updated_at > c.created_at) as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
 										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===

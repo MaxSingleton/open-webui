@@ -53,17 +53,20 @@
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
-	import {
-		addTagById,
-		createNewChat,
-		deleteTagById,
-		deleteTagsById,
-		getAllTags,
-		getChatById,
-		getChatList,
-		getTagsById,
-		updateChatById
-	} from '$lib/apis/chats';
+import {
+   addTagById,
+   createNewChat,
+   deleteTagById,
+   deleteTagsById,
+   getAllTags,
+   getChatById,
+   getChatList,
+   getTagsById,
+   updateChatById,
+   updateChatFolderIdById
+} from '$lib/apis/chats';
+import { getFolders, createNewFolder } from '$lib/apis/folders';
+import { builderMode } from '$lib/stores';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
@@ -1880,9 +1883,11 @@ export let onHistoryChange: (history: { messages: Record<string, any>; currentId
 		let _chatId = $chatId;
 
         if (!$temporaryChatEnabled) {
-            if (!disableLayout) {
-                // Create new chat only when not in Builder tool (disableLayout true skips)
-                chat = await createNewChat(localStorage.token, {
+            // Always lazily create a new chat on first send (even in Builder mode)
+            const isBuilder = get(builderMode);
+            if (!disableLayout || isBuilder) {
+                // Create new chat on server
+                const newChat = await createNewChat(localStorage.token, {
                     id: _chatId,
                     title: $i18n.t('New Chat'),
                     models: selectedModels,
@@ -1893,20 +1898,33 @@ export let onHistoryChange: (history: { messages: Record<string, any>; currentId
                     tags: [],
                     timestamp: Date.now()
                 });
-
-                _chatId = chat.id;
+                chat = newChat;
+                _chatId = newChat.id;
                 await chatId.set(_chatId);
+
+                // If this is a Builder chat, assign it into the 'Artifacts' folder
+                if (isBuilder) {
+                    try {
+                        let folders = await getFolders(localStorage.token);
+                        let artifact = folders.find((f) => f.name === 'Artifacts');
+                        if (!artifact) {
+                            artifact = await createNewFolder(localStorage.token, 'Artifacts');
+                        }
+                        await updateChatFolderIdById(localStorage.token, _chatId, artifact.id);
+                    } catch (e) {
+                        console.error('Failed to assign Builder chat to Artifacts folder', e);
+                    }
+                }
 
                 await chats.set(await getChatList(localStorage.token, $currentChatPage));
                 currentChatPage.set(1);
-
                 window.history.replaceState(history.state, '', `/c/${_chatId}`);
             }
         } else {
             _chatId = 'local';
             await chatId.set('local');
         }
-		await tick();
+        await tick();
 
 		return _chatId;
 	};

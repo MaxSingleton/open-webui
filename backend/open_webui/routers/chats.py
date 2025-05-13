@@ -97,6 +97,12 @@ async def get_user_chat_list_by_user_id(
 
 @router.post("/new", response_model=Optional[ChatResponse])
 async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
+    # Prevent creating truly empty chats (no messages)
+    if not isinstance(form_data.chat.get('messages'), list) or len(form_data.chat.get('messages', [])) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot create empty chat"
+        )
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
         return ChatResponse(**chat.model_dump())
