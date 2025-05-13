@@ -560,7 +560,8 @@ class ChatTable:
         search_text = " ".join(search_text_words)
 
         with get_db() as db:
-            query = db.query(Chat).filter(Chat.user_id == user_id)
+            # Only include chats without a folder (exclude Builder artifacts)
+            query = db.query(Chat).filter_by(user_id=user_id, folder_id=None)
 
             if not include_archived:
                 query = query.filter(Chat.archived == False)

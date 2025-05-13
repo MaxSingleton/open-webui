@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Chat from '$lib/components/chat/Chat.svelte';
-  import { createNewChat } from '$lib/apis/chats';
+  import { createNewChat, updateChatFolderIdById } from '$lib/apis/chats';
   // track chatId in global store (for other UI components)
   import { chatId as storeChatId } from '$lib/stores';
   // For live HTML previews
@@ -23,10 +23,21 @@
     $msgs => extractPreviewBlocks($msgs)
   );
 
+  // Ensure builder chats are stored in the Artifacts folder, not the main chat list
+  import { getFolders, createNewFolder } from '$lib/apis/folders';
   onMount(async () => {
     // Create a new chat session for Builder
     const chat = await createNewChat(localStorage.token, {});
     chatId = chat.id;
+    // Find or create the top-level 'Artifacts' folder for builder chats
+    let folders = await getFolders(localStorage.token);
+    let artifact = folders.find((f) => f.name === 'Artifacts');
+    if (!artifact) {
+      artifact = await createNewFolder(localStorage.token, 'Artifacts');
+    }
+    // Assign this chat to the Artifacts folder so it does not appear in the main Chats list
+    await updateChatFolderIdById(localStorage.token, chatId, artifact?.id);
+    // Update global chatId store (triggers sidebar folder refresh)
     storeChatId.set(chatId);
   });
 
