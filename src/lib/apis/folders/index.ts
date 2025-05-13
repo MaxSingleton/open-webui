@@ -267,3 +267,15 @@ export const deleteFolderById = async (token: string, id: string) => {
 
 	return res;
 };
+
+/**
+ * Clear all chats (and files) in the specified folder.
+ * @param token Authorization bearer token
+ * @param id Folder ID to clear items from
+ * @returns Response JSON from updateFolderItemsById
+ */
+export const clearFolderChats = async (token: string, id: string) => {
+    // Remove all chat and file items in the folder
+    const emptyItems = { chat_ids: [], file_ids: [] };
+    return updateFolderItemsById(token, id, emptyItems);
+};

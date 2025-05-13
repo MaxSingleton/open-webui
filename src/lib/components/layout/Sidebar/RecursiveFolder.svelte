@@ -15,12 +15,13 @@
 
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
-	import {
-		deleteFolderById,
-		updateFolderIsExpandedById,
-		updateFolderNameById,
-		updateFolderParentIdById
-	} from '$lib/apis/folders';
+import {
+   deleteFolderById,
+   updateFolderIsExpandedById,
+   updateFolderNameById,
+   updateFolderParentIdById,
+   clearFolderChats
+} from '$lib/apis/folders';
 	import { toast } from 'svelte-sonner';
 	import {
 		getChatById,
@@ -442,14 +443,22 @@
 								editHandler();
 							}, 200);
 						}}
-						on:delete={() => {
-							showDeleteConfirm = true;
-						}}
-						on:export={() => {
-							exportHandler();
-						}}
+               on:delete={() => {
+                   showDeleteConfirm = true;
+               }}
+               on:export={() => { exportHandler(); }}
+               on:clear={async () => {
+                   // Clear all chats in this folder
+                   try {
+                       await clearFolderChats(localStorage.token, folderId);
+                       toast.success($i18n.t('Chats cleared'));
+                       dispatch('update');
+                   } catch (err) {
+                       toast.error(`${err}`);
+                   }
+               }}
 					>
-						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+                <button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:pointerup|stopPropagation>
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 						</button>
 					</FolderMenu>

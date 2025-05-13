@@ -45,7 +45,8 @@
 	export let title;
 
 	export let selected = false;
-	export let shiftKey = false;
+export let shiftKey = false;
+export let disableNavigation = false;
 
 	let chat = null;
 
@@ -83,6 +84,8 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+			dispatch('change');
 		}
 	};
 
@@ -228,16 +231,16 @@
 </DeleteConfirmDialog>
 
 {#if dragged && x && y}
-	<DragGhost {x} {y}>
-		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
-			<div class="flex items-center gap-1">
-				<Document className=" size-[18px]" strokeWidth="2" />
-				<div class=" text-xs text-white line-clamp-1">
-					{title}
-				</div>
-			</div>
-		</div>
-	</DragGhost>
+   <DragGhost {x} {y}>
+      <div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
+         <div class="flex items-center gap-1">
+            <Document className=" size-[18px]" strokeWidth="2" />
+            <div class=" text-xs text-white line-clamp-1">
+               {title}
+            </div>
+         </div>
+      </div>
+   </DragGhost>
 {/if}
 
 <div
@@ -263,7 +266,8 @@
 			/>
 		</div>
 	{:else}
-		<a
+		{#if !disableNavigation}
+			<a
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
@@ -296,29 +300,43 @@
 					{title}
 				</div>
 			</div>
-		</a>
-	{/if}
+			</a>
+		{:else}
+			<div role="button" tabindex="0"
+				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+				  confirmEdit
+				    ? 'bg-gray-200 dark:bg-gray-900'
+				    : selected
+				      ? 'bg-gray-100 dark:dark:bg-gray-950'
+				      : ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+				on:click={() => dispatch('select')}
+				on:dblclick={() => { chatTitle = title; confirmEdit = true; }}
+				on:mouseenter={() => { mouseOver = true; }}
+				on:mouseleave={() => { mouseOver = false; }}
+			>
+				<div class=" flex self-center flex-1 w-full">
+					<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+						{title}
+					</div>
+				</div>
+			</div>
+        {/if}
+      {/if}
 
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div
-		class="
-        {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
-			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-            absolute {className === 'pr-2'
-			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
-
-              to-transparent"
-		on:mouseenter={(e) => {
-			mouseOver = true;
-		}}
-		on:mouseleave={(e) => {
-			mouseOver = false;
-		}}
-	>
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div
+          class="
+            {id === $chatId || confirmEdit
+              ? 'from-gray-200 dark:from-gray-900'
+              : selected
+                ? 'from-gray-100 dark:from-gray-950'
+                : 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+            absolute {className === 'pr-2' ? 'right-[8px]' : 'right-0'}
+            top-1/2 -translate-y-1/2 py-0 pr-0.5 mr-1.5 pl-5
+            bg-linear-to-l from-80% to-transparent"
+          on:mouseenter={() => { mouseOver = true; }}
+          on:mouseleave={() => { mouseOver = false; }}
+        >
 		{#if confirmEdit}
 			<div
 				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
@@ -376,58 +394,57 @@
 			</div>
 		{:else}
 			<div class="flex self-center space-x-1 z-10">
-				<ChatMenu
-					chatId={id}
-					cloneChatHandler={() => {
-						cloneChatHandler(id);
-					}}
-					shareHandler={() => {
-						showShareChatModal = true;
-					}}
-					archiveChatHandler={() => {
-						archiveChatHandler(id);
-					}}
-					renameHandler={async () => {
-						chatTitle = title;
-						confirmEdit = true;
+    <ChatMenu
+      chatId={id}
+      cloneChatHandler={() => {
+        cloneChatHandler(id);
+      }}
+      shareHandler={() => {
+        showShareChatModal = true;
+      }}
+      archiveChatHandler={() => {
+        archiveChatHandler(id);
+      }}
+      renameHandler={async () => {
+        chatTitle = title;
+        confirmEdit = true;
 
-						await tick();
-						const input = document.getElementById(`chat-title-input-${id}`);
-						if (input) {
-							input.focus();
-						}
-					}}
-					deleteHandler={() => {
-						showDeleteConfirm = true;
-					}}
-					onClose={() => {
-						dispatch('unselect');
-					}}
-					on:change={async () => {
-						dispatch('change');
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
-					}}
-				>
-					<button
-						aria-label="Chat Menu"
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							dispatch('select');
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-							/>
-						</svg>
-					</button>
+        await tick();
+        const input = document.getElementById(`chat-title-input-${id}`);
+        if (input) {
+          input.focus();
+        }
+      }}
+      deleteHandler={() => {
+        showDeleteConfirm = true;
+      }}
+      onClose={() => {
+        dispatch('unselect');
+      }}
+      on:change={async () => {
+        dispatch('change');
+      }}
+      on:tag={(e) => {
+        dispatch('tag', e.detail);
+      }}
+    >
+      <!-- Menu trigger button: no select dispatch to avoid opening modal when clicked -->
+      <button
+        aria-label="Chat Menu"
+        class="self-center dark:hover:text-white transition"
+        type="button"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+          class="w-4 h-4"
+        >
+          <path
+            d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+          />
+        </svg>
+      </button>
 				</ChatMenu>
 
 				{#if id === $chatId}

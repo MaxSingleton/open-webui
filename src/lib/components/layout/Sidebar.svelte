@@ -22,29 +22,80 @@
 		config,
 		isApp
 	} from '$lib/stores';
-	import { onMount, getContext, tick, onDestroy } from 'svelte';
+import { onMount, getContext, tick, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+const i18n = getContext('i18n');
+// Controls expansion state of the Artifacts folder
+let artifactsOpen = false;
 
-	import {
-		deleteChatById,
-		getChatList,
-		getAllTags,
-		getChatListBySearchText,
-		createNewChat,
-		getPinnedChatList,
-		toggleChatPinnedStatusById,
-		getChatPinnedStatusById,
-		getChatById,
-		updateChatFolderIdById,
-		importChat
-	} from '$lib/apis/chats';
-	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
+import {
+        deleteChatById,
+        getChatList,
+        getAllTags,
+        getChatListBySearchText,
+        createNewChat,
+        getPinnedChatList,
+        toggleChatPinnedStatusById,
+        getChatPinnedStatusById,
+        getChatById,
+        updateChatFolderIdById,
+        importChat,
+        getAllChats,
+        getChatsByFolderId
+    } from '$lib/apis/chats';
+    import fileSaver from 'file-saver';
+    const { saveAs } = fileSaver;
+import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
-	import UserMenu from './Sidebar/UserMenu.svelte';
-	import ChatItem from './Sidebar/ChatItem.svelte';
+    import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+    // Chats created from Builder will live in the 'Artifacts' chat folder
+    import UserMenu from './Sidebar/UserMenu.svelte';
+    import ChatItem from './Sidebar/ChatItem.svelte';
+    // Modal for displaying Artifacts builder chats
+    import Modal from '$lib/components/common/Modal.svelte';
+    import Chat from '$lib/components/chat/Chat.svelte';
+    import HtmlPreview from '$lib/components/common/HtmlPreview.svelte';
+    import { createMessagesList } from '$lib/utils';
+    import { extractPreviewBlocks } from '$lib/utils/htmlPreview';
+    import { convertMessagesToHistory } from '$lib/utils';
+    // State for Artifact builder modal
+    let artifactChatId: string = '';
+    let modalChat: any = null;
+    let modalHistory = { messages: {}, currentId: null };
+    let viewMode: 'artifact' | 'chat' = 'artifact';
+    let showBuilderModal: boolean = false;
+    async function openArtifactModal(id: string) {
+        artifactChatId = id;
+        // load full chat data
+        const chatData = await getChatById(localStorage.token, id).catch(() => null);
+        if (!chatData) {
+            toast.error($i18n.t('Failed to load artifact chat'));
+            return;
+        }
+        modalChat = chatData;
+        // Initialize history from saved chat content
+        // Use existing history if present, otherwise build from messages array
+        const chatContent = chatData.chat;
+        modalHistory = chatContent.history !== undefined && chatContent.history !== null
+            ? chatContent.history
+            : convertMessagesToHistory(chatContent.messages);
+        viewMode = 'artifact';
+        showBuilderModal = true;
+    }
+    // Reset when modal closes
+    $: if (!showBuilderModal) {
+        artifactChatId = '';
+        modalChat = null;
+        modalHistory = { messages: {}, currentId: null };
+    }
+    // Derive HTML preview blocks from the chat history
+    let previewBlocks: any[] = [];
+    $: previewBlocks = modalHistory && modalHistory.messages
+        ? extractPreviewBlocks(createMessagesList(modalHistory, modalHistory.currentId))
+        : [];
+import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
+import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
@@ -76,8 +127,36 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
-	let folders = {};
-	let newFolderId = null;
+    // Mapping of user-defined chat folders
+    let folders = {};
+    let newFolderId = null;
+    // Builder chats folder entry
+    let artifactFolder: any = null;
+
+    // Derive the 'Artifacts' folder from chat folders
+    $: artifactFolder = Object.values(folders).find((f: any) => f.name === 'Artifacts') || null;
+    // Fetch chats inside the Artifacts folder (reactive to folder and global chats list)
+    // Reactive fetch of artifact chats whenever the folder or chats list changes
+    let artifactChats = [];
+    $: if (artifactFolder && $chats !== null) {
+        (async () => {
+            try {
+                artifactChats = await getChatsByFolderId(localStorage.token, artifactFolder.id);
+            } catch {
+                artifactChats = [];
+            }
+        })();
+    } else {
+        artifactChats = [];
+    }
+    // Exclude Artifacts from the general chat history folders
+    let chatFolders: Record<string, any> = {};
+    $: {
+        chatFolders = { ...folders };
+        if (artifactFolder && chatFolders[artifactFolder.id]) {
+            delete chatFolders[artifactFolder.id];
+        }
+    }
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -390,8 +469,12 @@
 			}
 		});
 
-		await initChannels();
-		await initChatList();
+        await initChannels();
+        await initChatList();
+        // refresh folder list whenever a new chat is created (e.g. Builder chats)
+        chatId.subscribe(() => {
+          initFolders();
+        });
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
@@ -424,9 +507,37 @@
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
-	});
+    });
+    // Handler to export all chats in main Chats folder
+    async function exportAllChatsHandler() {
+        try {
+            const allChats = await getAllChats(localStorage.token);
+            const blob = new Blob([JSON.stringify(allChats, null, 2)], { type: 'application/json' });
+            saveAs(blob, `chats-export-${Date.now()}.json`);
+        } catch (err) {
+            toast.error(`${err}`);
+        }
+    }
+    // Handler to delete all chats in main Chats folder
+    async function clearAllChatsHandler() {
+        try {
+            const allChats = await getAllChats(localStorage.token);
+            const artifactId = artifactFolder?.id;
+            for (const chat of allChats) {
+                if (artifactId && chat.folder_id === artifactId) {
+                    // skip chats in Artifacts folder
+                    continue;
+                }
+                await deleteChatById(localStorage.token, chat.id).catch((err) => {
+                    console.error('Error deleting chat', chat.id, err);
+                });
+            }
+            toast.success($i18n.t('All chats deleted'));
+        } catch (err) {
+            toast.error(`${err}`);
+        }
+    }
 </script>
-
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
 	on:change={async () => {
@@ -446,7 +557,7 @@
 		});
 
 		if (res) {
-			$socket.emit('join-channels', { auth: { token: $user.token } });
+			$socket.emit('join-channels', { auth: { token: $user?.token } });
 			await initChannels();
 			showCreateChannel = false;
 		}
@@ -607,7 +718,76 @@
 					</div>
 				</a>
 			</div>
-		{/if}
+        {/if}
+        <!-- Builder link -->
+        <div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+            <a
+                class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+                href="/builder"
+                on:click={() => {
+                    selectedChatId = null;
+                    chatId.set('');
+                    if ($mobile) {
+                        showSidebar.set(false);
+                    }
+                }}
+                draggable="false"
+            >
+                <div class="self-center">
+                    <span class="size-[1.1rem]">🔧</span>
+                </div>
+                <div class="flex self-center translate-y-[0.5px]">
+                    <div class="self-center font-medium text-sm font-primary">{$i18n.t('Builder')}</div>
+                </div>
+            </a>
+        </div>
+        <!-- Builder chats stored in 'Artifacts' folder -->
+        <Folder
+          collapsible
+          bind:open={artifactsOpen}
+          className="px-2 mt-0.5"
+          name={$i18n.t('Artifacts')}
+        >
+          <!-- Dropdown menu for folder actions (only Clear and Export) -->
+          <FolderMenu
+            slot="menu"
+            showRename={false}
+            showDelete={false}
+            showExport={true}
+            showClear={true}
+            on:clear={async () => {
+              if (!artifactFolder) return;
+              try {
+                await clearFolderChats(localStorage.token, artifactFolder.id);
+                await initFolders();
+                await initChatList();
+              } catch (err) {
+                toast.error(`${err}`);
+              }
+            }}
+          >
+            <button class="p-1" on:pointerup|stopPropagation>
+              <EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+            </button>
+          </FolderMenu>
+          {#if artifactChats && artifactChats.filter(c => c.updated_at > c.created_at).length > 0}
+            {#each artifactChats.filter(c => c.updated_at > c.created_at) as chat (chat.id)}
+              <ChatItem
+                id={chat.id}
+                title={chat.title}
+                shiftKey={shiftKey}
+                selected={false}
+                disableNavigation={true}
+                on:select={() => openArtifactModal(chat.id)}
+                on:change={async () => { await initChatList(); }}
+              />
+            {/each}
+          {:else}
+            <div class="ml-3 pl-1 mt-1 text-xs text-gray-500">
+              {$i18n.t('No chats in Artifacts')}
+            </div>
+          {/if}
+        </Folder>
 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
@@ -627,13 +807,13 @@
 				? 'opacity-20'
 				: ''}"
 		>
-			{#if $config?.features?.enable_channels && ($user.role === 'admin' || $channels.length > 0) && !search}
+			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0) && !search}
 				<Folder
 					className="px-2 mt-0.5"
 					name={$i18n.t('Channels')}
 					dragAndDrop={false}
 					onAdd={async () => {
-						if ($user.role === 'admin') {
+						if ($user?.role === 'admin') {
 							await tick();
 
 							setTimeout(() => {
@@ -658,10 +838,6 @@
 				collapsible={!search}
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
-				onAdd={() => {
-					createFolder();
-				}}
-				onAddLabel={$i18n.t('New Folder')}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
@@ -708,9 +884,25 @@
 						if (res) {
 							await initFolders();
 						}
-					}
-				}}
+						}
+					}}
 			>
+            <!-- Main Chats folder menu: export only -->
+            <FolderMenu
+                slot="menu"
+                showNewFolder={true}
+                showRename={false}
+                showDelete={false}
+                showClear={true}
+                showExport={true}
+                on:add={() => { createFolder(); }}
+                on:clear={async () => { await clearAllChatsHandler(); await initChatList(); }}
+                on:export={exportAllChatsHandler}
+            >
+                <button class="p-1" on:pointerup|stopPropagation>
+                    <EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+                </button>
+            </FolderMenu>
 				{#if $temporaryChatEnabled}
 					<div class="absolute z-40 w-full h-full flex justify-center"></div>
 				{/if}
@@ -791,9 +983,9 @@
 					</div>
 				{/if}
 
-				{#if !search && folders}
-					<Folders
-						{folders}
+					{#if !search && folders}
+						<Folders
+							folders={chatFolders}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
@@ -810,7 +1002,7 @@
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 					<div class="pt-1.5">
 						{#if $chats}
-							{#each $chats as chat, idx}
+                {#each $chats.filter(c => c.updated_at > c.created_at) as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
 										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
@@ -891,9 +1083,9 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user !== null}
 					<UserMenu
-						role={$user.role}
+						role={$user?.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);
@@ -908,19 +1100,67 @@
 						>
 							<div class=" self-center mr-3">
 								<img
-									src={$user.profile_image_url}
+									src={$user?.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
+							<div class=" self-center font-medium">{$user?.name}</div>
 						</button>
 					</UserMenu>
 				{/if}
 			</div>
 		</div>
 	</div>
-</div>
+  </div>
+
+  <!-- Builder Artifact Modal -->
+  <!-- Popup at 50vw x 75vh with toggle between Artifact view and Chat view -->
+  <Modal
+    bind:show={showBuilderModal}
+    modalWidth="50vw"
+    modalHeight="75vh"
+  >
+    <div class="flex justify-center items-center border-b bg-white dark:bg-gray-900 px-4 py-2 space-x-4">
+      <button
+        class="px-3 py-1 rounded-t-lg text-gray-500 dark:text-gray-400"
+        class:font-semibold={viewMode === 'artifact'}
+        class:bg-gray-200={viewMode === 'artifact'}
+        class:dark:bg-gray-700={viewMode === 'artifact'}
+        class:text-gray-900={viewMode === 'artifact'}
+        class:dark:text-gray-100={viewMode === 'artifact'}
+        on:click={() => (viewMode = 'artifact')}
+      >
+        {$i18n.t('Preview')}
+      </button>
+      <button
+        class="px-3 py-1 rounded-t-lg text-gray-500 dark:text-gray-400"
+        class:font-semibold={viewMode === 'chat'}
+        class:bg-gray-200={viewMode === 'chat'}
+        class:dark:bg-gray-700={viewMode === 'chat'}
+        class:text-gray-900={viewMode === 'chat'}
+        class:dark:text-gray-100={viewMode === 'chat'}
+        on:click={() => (viewMode = 'chat')}
+      >
+        {$i18n.t('Chat')}
+      </button>
+    </div>
+    {#if viewMode === 'artifact'}
+      {#if previewBlocks.length > 0}
+        <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+          <HtmlPreview class="flex-1" blocks={previewBlocks} />
+        </div>
+      {:else}
+        <div class="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+          {$i18n.t('No HTML preview available')}
+        </div>
+      {/if}
+    {:else}
+      <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+        <Chat class="flex-1" chatIdProp={artifactChatId} disableLayout={true} />
+      </div>
+    {/if}
+  </Modal>
 
 <style>
 	.scrollbar-hidden:active::-webkit-scrollbar-thumb,

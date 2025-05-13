@@ -3,8 +3,8 @@
 	import { slide } from 'svelte/transition';
 	import { Pane, PaneResizer } from 'paneforge';
 
-	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+import { onDestroy, onMount, tick } from 'svelte';
+import { mobile, showControls, showCallOverlay, showOverview, showArtifacts, builderMode } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
@@ -165,7 +165,7 @@
 								}}
 							/>
 						</div>
-					{:else if $showArtifacts}
+					{:else if $showArtifacts && !$builderMode}
 						<Artifacts {history} />
 					{:else if $showOverview}
 						<Overview
@@ -223,14 +223,14 @@
 				showControls.set(false);
 			}}
 			collapsible={true}
-			class="pt-8"
+			class=" z-10 "
 		>
 			{#if $showControls}
-				<div class="pr-4 pb-8 flex max-h-full min-h-full">
+				<div class="flex max-h-full min-h-full">
 					<div
 						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
-							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'}  rounded-xl z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">
@@ -246,7 +246,7 @@
 									}}
 								/>
 							</div>
-						{:else if $showArtifacts}
+						{:else if $showArtifacts && !$builderMode}
 							<Artifacts {history} overlay={dragged} />
 						{:else if $showOverview}
 							<Overview
