@@ -320,7 +320,8 @@ export let disableNavigation = false;
 					</div>
 				</div>
 			</div>
-		{/if}
+        {/if}
+      {/if}
 
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div
