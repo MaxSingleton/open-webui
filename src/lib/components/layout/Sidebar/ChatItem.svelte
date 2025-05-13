@@ -231,18 +231,17 @@ export let disableNavigation = false;
 </DeleteConfirmDialog>
 
 {#if dragged && x && y}
-	<DragGhost {x} {y}>
-		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
-			<div class="flex items-center gap-1">
-				<Document className=" size-[18px]" strokeWidth="2" />
-				<div class=" text-xs text-white line-clamp-1">
-					{title}
-				</div>
-			</div>
-		</div>
-	</DragGhost>
-       		{/if}
-       	{/if}
+   <DragGhost {x} {y}>
+      <div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
+         <div class="flex items-center gap-1">
+            <Document className=" size-[18px]" strokeWidth="2" />
+            <div class=" text-xs text-white line-clamp-1">
+               {title}
+            </div>
+         </div>
+      </div>
+   </DragGhost>
+{/if}
 
 <div
 	bind:this={itemElement}
