@@ -1976,13 +1976,11 @@ export let onHistoryChange: (history: { messages: Record<string, any>; currentId
 />
 
 <div
-  class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {($showSidebar && !disableLayout)
-    ? 'md:max-w-[calc(100%-260px)]'
-    : ''} w-full max-w-full flex flex-col"
   id="chat-container"
+  class={`transition-width duration-200 ease-in-out w-full max-w-full flex flex-col ${disableLayout ? 'h-full' : 'h-screen max-h-[100dvh]'} ${$showSidebar && !disableLayout ? 'md:max-w-[calc(100%-260px)]' : ''}`}
 >
 	{#if !loading}
-		{#if $settings?.backgroundImageUrl ?? null}
+		{#if !disableLayout && ($settings?.backgroundImageUrl ?? null)}
         <div
             class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat {($showSidebar && !disableLayout)
               ? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'

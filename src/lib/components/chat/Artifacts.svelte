@@ -4,15 +4,17 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-import { chatId, settings, showArtifacts, showControls } from '$lib/stores';
+import { chatId, showArtifacts, showControls } from '$lib/stores';
 import { addArtifact } from '$lib/stores/artifacts';
 import { v4 as uuidv4 } from 'uuid';
 import XMark from '../icons/XMark.svelte';
-	import { copyToClipboard, createMessagesList } from '$lib/utils';
+import { copyToClipboard, createMessagesList } from '$lib/utils';
+import { extractPreviewBlocks } from '$lib/utils/htmlPreview';
 import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
 import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import SvgPanZoom from '../common/SVGPanZoom.svelte';
+import SvgPanZoom from '../common/SVGPanZoom.svelte';
+import HtmlPreview from '$lib/components/common/HtmlPreview.svelte';
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
 	export let overlay = false;
@@ -25,12 +27,18 @@ import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 	let copied = false;
 	let iframeElement: HTMLIFrameElement;
 
-	$: if (history) {
-		messages = createMessagesList(history, history.currentId);
-		getContents();
-	} else {
-		messages = [];
-		getContents();
+	$: {
+		if (history) {
+			messages = createMessagesList(history, history.currentId);
+		} else {
+			messages = [];
+		}
+		contents = extractPreviewBlocks(messages);
+		if (contents.length === 0) {
+			showControls.set(false);
+			showArtifacts.set(false);
+		}
+		selectedContentIdx = contents.length > 0 ? contents.length - 1 : 0;
 	}
 
 	const getContents = () => {
@@ -326,35 +334,15 @@ function saveArtifact() {
 		{/if}
 
 		<div class="flex-1 w-full h-full">
-			<div class=" h-full flex flex-col">
-				{#if contents.length > 0}
-					<div class="max-w-full w-full h-full">
-						{#if contents[selectedContentIdx].type === 'iframe'}
-							<iframe
-								bind:this={iframeElement}
-								title="Content"
-								srcdoc={contents[selectedContentIdx].content}
-								class="w-full border-0 h-full rounded-none"
-								sandbox="allow-scripts{($settings?.iframeSandboxAllowForms ?? false)
-									? ' allow-forms'
-									: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
-									? ' allow-same-origin'
-									: ''}"
-								on:load={iframeLoadHandler}
-							></iframe>
-						{:else if contents[selectedContentIdx].type === 'svg'}
-							<SvgPanZoom
-								className=" w-full h-full max-h-full overflow-hidden"
-								svg={contents[selectedContentIdx].content}
-							/>
-						{/if}
-					</div>
-				{:else}
-					<div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
-						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
-					</div>
-				{/if}
-			</div>
+           <div class="h-full flex flex-col">
+               {#if contents.length > 0}
+                   <HtmlPreview blocks={contents} />
+               {:else}
+                   <div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
+                       {$i18n.t('No HTML, CSS, or JavaScript content found.')}
+                   </div>
+               {/if}
+           </div>
 		</div>
 	</div>
 </div>

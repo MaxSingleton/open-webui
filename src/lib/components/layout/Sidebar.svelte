@@ -55,7 +55,9 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
     // Modal for displaying Artifacts builder chats
     import Modal from '$lib/components/common/Modal.svelte';
     import Chat from '$lib/components/chat/Chat.svelte';
-    import Artifacts from '$lib/components/chat/Artifacts.svelte';
+    import HtmlPreview from '$lib/components/common/HtmlPreview.svelte';
+    import { createMessagesList } from '$lib/utils';
+    import { extractPreviewBlocks } from '$lib/utils/htmlPreview';
     import { convertMessagesToHistory } from '$lib/utils';
     // State for Artifact builder modal
     let artifactChatId: string = '';
@@ -72,7 +74,12 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
             return;
         }
         modalChat = chatData;
-        modalHistory = convertMessagesToHistory(chatData);
+        // Initialize history from saved chat content
+        // Use existing history if present, otherwise build from messages array
+        const chatContent = chatData.chat;
+        modalHistory = chatContent.history !== undefined && chatContent.history !== null
+            ? chatContent.history
+            : convertMessagesToHistory(chatContent.messages);
         viewMode = 'artifact';
         showBuilderModal = true;
     }
@@ -82,6 +89,11 @@ import { createNewFolder, getFolders, updateFolderParentIdById, clearFolderChats
         modalChat = null;
         modalHistory = { messages: {}, currentId: null };
     }
+    // Derive HTML preview blocks from the chat history
+    let previewBlocks: any[] = [];
+    $: previewBlocks = modalHistory && modalHistory.messages
+        ? extractPreviewBlocks(createMessagesList(modalHistory, modalHistory.currentId))
+        : [];
 import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
 import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -1109,7 +1121,7 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
     modalWidth="50vw"
     modalHeight="75vh"
   >
-    <div class="flex justify-center items-center border-b px-4 py-2 space-x-4">
+    <div class="flex justify-center items-center border-b bg-white dark:bg-gray-900 px-4 py-2 space-x-4">
       <button
         class="px-3 py-1 rounded-t-lg text-gray-500 dark:text-gray-400"
         class:font-semibold={viewMode === 'artifact'}
@@ -1119,7 +1131,7 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
         class:dark:text-gray-100={viewMode === 'artifact'}
         on:click={() => (viewMode = 'artifact')}
       >
-        {$i18n.t('Artifact')}
+        {$i18n.t('Preview')}
       </button>
       <button
         class="px-3 py-1 rounded-t-lg text-gray-500 dark:text-gray-400"
@@ -1134,14 +1146,19 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
       </button>
     </div>
     {#if viewMode === 'artifact'}
-      {#if modalChat}
-        <!-- Render using existing Artifacts component -->
-        <Artifacts overlay={false} history={modalHistory} />
+      {#if previewBlocks.length > 0}
+        <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+          <HtmlPreview class="flex-1" blocks={previewBlocks} />
+        </div>
       {:else}
-        <div class="p-4 text-gray-500">{$i18n.t('No artifact data')}</div>
+        <div class="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+          {$i18n.t('No HTML preview available')}
+        </div>
       {/if}
     {:else}
-      <Chat chatIdProp={artifactChatId} disableLayout={true} />
+      <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+        <Chat class="flex-1" chatIdProp={artifactChatId} disableLayout={true} />
+      </div>
     {/if}
   </Modal>
 
