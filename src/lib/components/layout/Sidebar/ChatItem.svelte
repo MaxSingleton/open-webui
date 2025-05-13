@@ -301,26 +301,20 @@
 		</a>
 	{/if}
 
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div
-		class="
-        {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
-			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-            absolute {className === 'pr-2'
-			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
-
-              to-transparent"
-		on:mouseenter={(e) => {
-			mouseOver = true;
-		}}
-		on:mouseleave={(e) => {
-			mouseOver = false;
-		}}
-	>
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div
+          class="
+            {id === $chatId || confirmEdit
+              ? 'from-gray-200 dark:from-gray-900'
+              : selected
+                ? 'from-gray-100 dark:from-gray-950'
+                : 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+            absolute {className === 'pr-2' ? 'right-[8px]' : 'right-0'}
+            top-1/2 -translate-y-1/2 py-1 pr-0.5 mr-1.5 pl-5
+            bg-linear-to-l from-80% to-transparent"
+          on:mouseenter={() => { mouseOver = true; }}
+          on:mouseleave={() => { mouseOver = false; }}
+        >
 		{#if confirmEdit}
 			<div
 				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
