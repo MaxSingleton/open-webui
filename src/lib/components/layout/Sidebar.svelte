@@ -765,6 +765,7 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
                 title={chat.title}
                 shiftKey={shiftKey}
                 selected={false}
+                disableNavigation={true}
                 on:select={() => openArtifactModal(chat.id)}
                 on:change={async () => { await initChatList(); }}
               />

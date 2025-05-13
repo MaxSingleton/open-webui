@@ -45,7 +45,8 @@
 	export let title;
 
 	export let selected = false;
-	export let shiftKey = false;
+export let shiftKey = false;
+export let disableNavigation = false;
 
 	let chat = null;
 
@@ -265,7 +266,8 @@
 			/>
 		</div>
 	{:else}
-		<a
+		{#if !disableNavigation}
+			<a
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
@@ -298,8 +300,27 @@
 					{title}
 				</div>
 			</div>
-		</a>
-	{/if}
+			</a>
+		{:else}
+			<div role="button" tabindex="0"
+				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+				  confirmEdit
+				    ? 'bg-gray-200 dark:bg-gray-900'
+				    : selected
+				      ? 'bg-gray-100 dark:dark:bg-gray-950'
+				      : ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+				on:click={() => dispatch('select')}
+				on:dblclick={() => { chatTitle = title; confirmEdit = true; }}
+				on:mouseenter={() => { mouseOver = true; }}
+				on:mouseleave={() => { mouseOver = false; }}
+			>
+				<div class=" flex self-center flex-1 w-full">
+					<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+						{title}
+					</div>
+				</div>
+			</div>
+		{/if}
 
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div
