@@ -14,7 +14,7 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 # Build front-end: increase Node.js heap size to avoid OOM in large builds
 ARG BUILD_HASH
-ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV NODE_OPTIONS=--max-old-space-size=8192
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -91,7 +91,7 @@ RUN apt-get update && \
 # Install Python Dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-RUN pip3 install uv jupyter && \
+RUN pip3 install --no-cache-dir uv jupyter && \
     if [ "$USE_CUDA" = "true" ]; then \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
     uv pip install --system -r requirements.txt --no-cache-dir && \
@@ -105,6 +105,7 @@ RUN pip3 install uv jupyter && \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
+    rm -rf /root/.cache/pip /tmp/*; \
     chown -R $UID:$GID /app/backend/data/
 
 # Copy Built Frontend Files
