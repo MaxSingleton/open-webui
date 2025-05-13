@@ -1,14 +1,27 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import Chat from '$lib/components/chat/Chat.svelte';
   import { createNewChat } from '$lib/apis/chats';
-  import { selectedArtifact } from '$lib/stores/artifacts';
+  // track chatId in global store (for other UI components)
   import { chatId as storeChatId } from '$lib/stores';
-  import { get } from 'svelte/store';
+  // For live HTML previews
+  import HtmlPreview from '$lib/components/common/HtmlPreview.svelte';
+  import { extractPreviewBlocks, type PreviewBlock } from '$lib/utils/htmlPreview';
+  import { writable, derived } from 'svelte/store';
+  import { createMessagesList } from '$lib/utils';
 
   let chatId = '';
-  let artifact = get(selectedArtifact);
-  const unsub = selectedArtifact.subscribe(v => artifact = v);
+  // Track running list of messages for preview extraction
+  const messages = writable<Array<{ role: string; content: string }>>([]);
+  function onHistoryChange(history) {
+    // build flat list of messages in order
+    messages.set(createMessagesList(history, history.currentId));
+  }
+  // Derive preview blocks from messages
+  const previewBlocks: typeof PreviewBlock[] = derived(
+    messages,
+    $msgs => extractPreviewBlocks($msgs)
+  );
 
   onMount(async () => {
     // Create a new chat session for Builder
@@ -17,34 +30,25 @@
     storeChatId.set(chatId);
   });
 
-  onDestroy(() => {
-    unsub();
-  });
 </script>
 
 <div class="flex flex-1 h-full w-full flex-row">
   <div class="w-1/3 border-r h-full flex flex-col">
     {#if chatId}
-      <Chat chatIdProp={chatId} disableLayout={true} />
+      <Chat
+        chatIdProp={chatId}
+        disableLayout={true}
+        onHistoryChange={onHistoryChange}
+      />
     {/if}
   </div>
   <div class="w-2/3 h-full flex flex-col">
-    {#if artifact}
-      <div class="flex flex-col h-full bg-white dark:bg-gray-900">
-        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-          <div class="font-semibold text-lg truncate">{artifact.name}</div>
-        </div>
-        <div class="flex-1">
-          <iframe
-            class="w-full h-full border-0"
-            srcdoc={artifact.content}
-            sandbox="allow-scripts allow-same-origin"
-          ></iframe>
-        </div>
-      </div>
+    {#if $previewBlocks.length > 0}
+      <!-- Live HTML/CSS/JS preview of code blocks -->
+      <HtmlPreview blocks={$previewBlocks} />
     {:else}
       <div class="w-full h-full flex items-center justify-center text-gray-500">
-        No artifact selected
+        No HTML/CSS/JS preview available
       </div>
     {/if}
   </div>

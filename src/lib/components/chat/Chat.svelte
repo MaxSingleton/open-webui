@@ -92,6 +92,8 @@
 export let chatIdProp = '';
 // Disable sidebar-based width/translate adjustments (e.g. in Builder page)
 export let disableLayout = false;
+// Builder callback: invoked whenever chat history (messages) changes
+export let onHistoryChange: (history: { messages: Record<string, any>; currentId: any }) => void = () => {};
 // If true, internal pane-split for controls is skipped/hid by sizing
 
 	let loading = false;
@@ -356,6 +358,8 @@ export let disableLayout = false;
 				}
 
 				history.messages[event.message_id] = message;
+				// notify builder (if provided) of updated history
+				try { onHistoryChange(history); } catch {}
 			}
 		}
 	};
@@ -911,6 +915,8 @@ export let disableLayout = false;
 		}
 
 		taskIds = null;
+		// notify builder (if provided) of updated history after completion
+		try { onHistoryChange(history); } catch {};
 	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
