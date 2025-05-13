@@ -760,12 +760,14 @@ import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte'
           </FolderMenu>
           {#if artifactChats && artifactChats.filter(c => c.updated_at > c.created_at).length > 0}
             {#each artifactChats.filter(c => c.updated_at > c.created_at) as chat (chat.id)}
-              <div
-                class="relative px-[11px] py-[6px] whitespace-nowrap overflow-hidden text-ellipsis rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer"
-                on:click={() => openArtifactModal(chat.id)}
-              >
-                {chat.title}
-              </div>
+              <ChatItem
+                id={chat.id}
+                title={chat.title}
+                shiftKey={shiftKey}
+                selected={false}
+                on:select={() => openArtifactModal(chat.id)}
+                on:change={async () => { await initChatList(); }}
+              />
             {/each}
           {:else}
             <div class="ml-3 pl-1 mt-1 text-xs text-gray-500">
