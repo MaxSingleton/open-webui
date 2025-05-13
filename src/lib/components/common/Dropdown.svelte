@@ -18,7 +18,7 @@
 	}}
 	typeahead={false}
 >
-	<DropdownMenu.Trigger>
+    <DropdownMenu.Trigger on:click|stopPropagation>
 		<slot />
 	</DropdownMenu.Trigger>
 
