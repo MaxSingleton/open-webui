@@ -241,7 +241,8 @@ export let disableNavigation = false;
 			</div>
 		</div>
 	</DragGhost>
-{/if}
+       		{/if}
+       	{/if}
 
 <div
 	bind:this={itemElement}
