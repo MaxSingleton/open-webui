@@ -42,11 +42,9 @@ services:
       - APP_BUILD_HASH=dev-build
     depends_on:
       - open-webui
-    # Use host-installed node_modules; run dev without reinstall
-    command:
-      - npm
-      - run
-      - dev:fast
+    # Ensure dependencies are installed in the node_modules volume, then start dev server
+    command: >
+      sh -c 'npm ci --no-audit --prefer-offline && npm run dev:fast'
     # [end frontend]
   
 volumes:
