@@ -213,6 +213,25 @@ This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LI
 If you have any questions, suggestions, or need assistance, please open an issue or join our
 [Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
+## Local Frontend Development with Docker Compose
+
+To develop the Svelte frontend and FastAPI backend together in Docker (so that `/api` calls are proxied without CORS issues), follow these steps:
+
+1. Ensure no local Vite dev server is running (`npm run dev` / `npm run dev:fast`).
+2. Stop and remove containers (including orphans):
+   ```bash
+   docker-compose down --remove-orphans
+   ```
+3. Build and start both services (ensure the override file is loaded):
+   ```bash
+   # Via Makefile shortcut:
+   make dev
+
+   # Or explicitly with both compose files:
+   docker-compose -f docker-compose.yml -f docker-compose.override.yaml up --build
+   ```
+4. Open your browser at http://localhost:5173 to see the live-reloading frontend.
+
 ## Star History
 
 <a href="https://star-history.com/#open-webui/open-webui&Date">

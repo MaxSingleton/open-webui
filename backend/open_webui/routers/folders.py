@@ -65,7 +65,7 @@ async def get_folders(user=Depends(get_verified_user)):
 ############################
 
 
-@router.post("/")
+@router.post("/", response_model=FolderModel)
 def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
     folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
         None, user.id, form_data.name
@@ -78,8 +78,15 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data.name)
-        return folder
+        meta_data = form_data.model_dump(exclude={"name"})
+        folder = Folders.insert_new_folder(user.id, form_data.name, meta=meta_data)
+        if folder:
+            return folder
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error creating folder"),
+            )
     except Exception as e:
         log.exception(e)
         log.error("Error creating folder")
@@ -127,10 +134,10 @@ async def update_folder_name_by_id(
             )
 
         try:
+            meta_data = form_data.model_dump(exclude={"name"})
             folder = Folders.update_folder_name_by_id_and_user_id(
-                id, user.id, form_data.name
+                id, user.id, form_data.name, meta=meta_data
             )
-
             return folder
         except Exception as e:
             log.exception(e)

@@ -19,6 +19,11 @@ startAndBuild:
 
 stop:
 	$(DOCKER_COMPOSE) stop
+ 
+dev:
+	# Tear down any running services and remove orphans, then start both compose files explicitly
+	$(DOCKER_COMPOSE) -f docker-compose.yaml -f docker-compose.override.yml down --remove-orphans
+	$(DOCKER_COMPOSE) -f docker-compose.yaml -f docker-compose.override.yml up --build -d
 
 update:
 	# Calls the LLM update script

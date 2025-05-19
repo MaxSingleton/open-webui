@@ -2,37 +2,31 @@ version: "3.9"
 services:
   open-webui:
     container_name: open-webui-dev
+    # build only the backend (base) stage from the multi-stage Dockerfile
     build:
       context: .
       dockerfile: Dockerfile
+      target: base
+    working_dir: /app/backend
     volumes:
-      # Mount only the backend code to preserve the built frontend in /app/build
       - ./backend:/app/backend:delegated
       - open-webui:/app/backend/data
-    # Disable Ollama container dependency for local dev (using OpenAI API only)
-    depends_on: []
-    # Map backend port 8080 on host so frontend can reach it at http://localhost:8080
     ports:
       - "8080:8080"
     environment:
-      # Development mode settings
       - ENV=dev
       - WEBUI_SECRET_KEY=dev-secret-key
-      # Disable Ollama API integration
       - ENABLE_OLLAMA_API=false
       - USE_OLLAMA_DOCKER=false
+    # Install deps and start backend with hot reload
     command: >
-      uvicorn open_webui.main:app
-      --host 0.0.0.0
-      --port 8080
-      --reload
+      sh -c "pip install --no-cache-dir -r requirements.txt && uvicorn open_webui.main:app --host 0.0.0.0 --port 8080 --reload"
 
   frontend:
     container_name: open-webui-frontend-dev
     image: node:22-alpine3.20
     working_dir: /app
     volumes:
-      # Mount code and cache node_modules in a named volume
       - ./:/app:delegated
       - frontend_node_modules:/app/node_modules:delegated
     ports:
@@ -42,10 +36,8 @@ services:
       - APP_BUILD_HASH=dev-build
     depends_on:
       - open-webui
-    # Ensure dependencies are installed in the node_modules volume, then start dev server
     command: >
       sh -c 'npm ci --no-audit --prefer-offline && npm run dev:fast'
-    # [end frontend]
-  
+
 volumes:
   frontend_node_modules:
