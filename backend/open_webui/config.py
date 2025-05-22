@@ -59,7 +59,7 @@ def run_migrations():
         migrations_path = OPEN_WEBUI_DIR / "migrations"
         alembic_cfg.set_main_option("script_location", str(migrations_path))
 
-        command.upgrade(alembic_cfg, "head")
+        command.upgrade(alembic_cfg, "heads")
     except Exception as e:
         log.exception(f"Error running migrations: {e}")
 
@@ -643,6 +643,39 @@ def load_oauth_providers():
 
 
 load_oauth_providers()
+
+# -- Notion OAuth configuration --------------------------------------------
+NOTION_CLIENT_ID = PersistentConfig(
+    "NOTION_CLIENT_ID",
+    "oauth.notion.client_id",
+    os.environ.get("NOTION_CLIENT_ID", ""),
+)
+NOTION_CLIENT_SECRET = PersistentConfig(
+    "NOTION_CLIENT_SECRET",
+    "oauth.notion.client_secret",
+    os.environ.get("NOTION_CLIENT_SECRET", ""),
+)
+NOTION_REDIRECT_URI = PersistentConfig(
+    "NOTION_REDIRECT_URI",
+    "oauth.notion.redirect_uri",
+    os.environ.get("NOTION_REDIRECT_URI", ""),
+)
+# Register Notion as an OAuth provider if configured
+if NOTION_CLIENT_ID.value and NOTION_CLIENT_SECRET.value and NOTION_REDIRECT_URI.value:
+    def notion_oauth_register(client):
+        client.register(
+            name="notion",
+            client_id=NOTION_CLIENT_ID.value,
+            client_secret=NOTION_CLIENT_SECRET.value,
+            authorize_url="https://api.notion.com/v1/oauth/authorize",
+            access_token_url="https://api.notion.com/v1/oauth/token",
+            client_kwargs={"scope": "database.read database.write pages.read pages.write"},
+            redirect_uri=NOTION_REDIRECT_URI.value,
+        )
+    OAUTH_PROVIDERS["notion"] = {
+        "redirect_uri": NOTION_REDIRECT_URI.value,
+        "register": notion_oauth_register,
+    }
 
 ####################################
 # Static DIR

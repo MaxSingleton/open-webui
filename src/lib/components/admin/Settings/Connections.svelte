@@ -5,6 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
+	import { getNotionConfig, updateNotionConfig } from '$lib/apis/configs';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels } from '$lib/apis';
 	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
@@ -42,6 +43,11 @@
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let directConnectionsConfig = null;
+  
+// Notion Integration credentials
+  let NOTION_CLIENT_ID: string = '';
+  let NOTION_CLIENT_SECRET: string = '';
+  let NOTION_REDIRECT_URI: string = '';
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -117,6 +123,21 @@
 		}
 	};
 
+	// Update Notion Integration settings
+	const updateNotionHandler = async () => {
+		const res = await updateNotionConfig(localStorage.token, {
+			NOTION_CLIENT_ID,
+			NOTION_CLIENT_SECRET,
+			NOTION_REDIRECT_URI,
+		}).catch((error) => {
+			toast.error(`${error}`);
+		});
+		if (res) {
+			toast.success($i18n.t('Notion settings updated'));
+			await models.set(await getModels());
+		}
+	};
+
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
@@ -147,9 +168,15 @@
 				(async () => {
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
-				(async () => {
-					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
-				})()
+			(async () => {
+				directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
+			})(),
+			(async () => {
+				const cfg = await getNotionConfig(localStorage.token);
+				NOTION_CLIENT_ID = cfg.NOTION_CLIENT_ID;
+				NOTION_CLIENT_SECRET = cfg.NOTION_CLIENT_SECRET;
+				NOTION_REDIRECT_URI = cfg.NOTION_REDIRECT_URI;
+			})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
@@ -197,6 +224,7 @@
 		updateOpenAIHandler();
 		updateOllamaHandler();
 		updateDirectConnectionsHandler();
+		updateNotionHandler();
 
 		dispatch('save');
 	};
@@ -355,7 +383,38 @@
 							</a>
 						</div>
 					</div>
-				{/if}
+			{/if}
+			</div>
+
+			<!-- Notion Integration Configuration -->
+			<div class="pr-1.5 my-4">
+				<div class="font-medium text-sm mb-2">Notion Integration</div>
+				<div class="space-y-2">
+					<div>
+						<label class="block text-xs font-medium">Client ID</label>
+						<input
+							type="text"
+							bind:value={NOTION_CLIENT_ID}
+							class="w-full border p-1 rounded text-sm"
+						/>
+					</div>
+					<div>
+						<label class="block text-xs font-medium">Client Secret</label>
+						<input
+							type="password"
+							bind:value={NOTION_CLIENT_SECRET}
+							class="w-full border p-1 rounded text-sm"
+						/>
+					</div>
+					<div>
+						<label class="block text-xs font-medium">Redirect URI</label>
+						<input
+							type="text"
+							bind:value={NOTION_REDIRECT_URI}
+							class="w-full border p-1 rounded text-sm"
+						/>
+					</div>
+				</div>
 			</div>
 
 			<hr class=" border-gray-100 dark:border-gray-850" />
