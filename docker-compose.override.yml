@@ -18,6 +18,7 @@ services:
       - WEBUI_SECRET_KEY=dev-secret-key
       - ENABLE_OLLAMA_API=false
       - USE_OLLAMA_DOCKER=false
+      - OPENWEBUI_IMAGE_PROXY=off
     # Install deps and start backend with hot reload
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt && uvicorn open_webui.main:app --host 0.0.0.0 --port 8080 --reload"

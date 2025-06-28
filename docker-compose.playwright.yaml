@@ -8,3 +8,4 @@ services:
     environment:
       - 'WEB_LOADER_ENGINE=playwright'
       - 'PLAYWRIGHT_WS_URL=ws://playwright:3000'
+      - 'OPENWEBUI_IMAGE_PROXY=off'
