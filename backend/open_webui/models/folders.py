@@ -60,20 +60,20 @@ class FolderForm(BaseModel):
 
 class FolderTable:
     def insert_new_folder(
-        self, user_id: str, name: str, parent_id: Optional[str] = None
+        self, user_id: str, name: str, parent_id: Optional[str] = None, meta: Optional[dict] = None
     ) -> Optional[FolderModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
-            folder = FolderModel(
-                **{
-                    "id": id,
-                    "user_id": user_id,
-                    "name": name,
-                    "parent_id": parent_id,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                }
-            )
+            folder_data = {
+                "id": id,
+                "user_id": user_id,
+                "name": name,
+                "parent_id": parent_id,
+                "meta": meta or {},
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+            }
+            folder = FolderModel(**folder_data)
             try:
                 result = Folder(**folder.model_dump())
                 db.add(result)
@@ -188,7 +188,7 @@ class FolderTable:
             return
 
     def update_folder_name_by_id_and_user_id(
-        self, id: str, user_id: str, name: str
+        self, id: str, user_id: str, name: str, meta: Optional[dict] = None
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
@@ -207,6 +207,10 @@ class FolderTable:
                     return None
 
                 folder.name = name
+                if meta is not None:
+                    existing_meta = folder.meta or {}
+                    existing_meta.update(meta)
+                    folder.meta = existing_meta
                 folder.updated_at = int(time.time())
 
                 db.commit()

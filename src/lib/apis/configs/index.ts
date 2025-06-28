@@ -195,12 +195,13 @@ export const verifyToolServerConnection = async (token: string, connection: obje
 			return null;
 		});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
+    if (error) {
+        throw error;
+    }
+    // Return the fetched result
+    return res;
 };
+
 
 export const getCodeExecutionConfig = async (token: string) => {
 	let error = null;
@@ -315,6 +316,9 @@ export const setModelsConfig = async (token: string, config: object) => {
 
 	return res;
 };
+
+// Re-export Notion Integration API
+export * from './notion';
 
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;

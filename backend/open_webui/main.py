@@ -322,6 +322,10 @@ from open_webui.config import (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
     reset_config,
+    # Notion Integration
+    NOTION_CLIENT_ID,
+    NOTION_CLIENT_SECRET,
+    NOTION_REDIRECT_URI,
 )
 from open_webui.env import (
     AUDIT_EXCLUDED_PATHS,
@@ -433,6 +437,24 @@ async def lifespan(app: FastAPI):
         get_license_data(app, LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    # Apply any pending Alembic migrations before starting the server
+    try:
+        from alembic.config import Config
+        from alembic import command
+        from pathlib import Path
+
+        # Load alembic.ini and override script_location to the open_webui migrations folder
+        base_dir = Path(__file__).parent
+        alembic_cfg = Config(str(base_dir / "alembic.ini"))
+        # migrations are located under open_webui/migrations
+        alembic_cfg.set_main_option(
+            "script_location",
+            str(base_dir / "migrations")
+        )
+        command.upgrade(alembic_cfg, "heads")
+    except Exception as e:
+        log.error(f"Failed to apply Alembic migrations: {e}")
+        raise
     yield
 
 
@@ -443,6 +465,11 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+# Health check endpoint for Docker
+@app.get("/health")
+async def health():
+    return {"status": True}
 
 oauth_manager = OAuthManager(app)
 
@@ -509,6 +536,11 @@ app.state.TOOL_SERVERS = []
 ########################################
 
 app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
+
+# -- Notion Integration Credentials --------------------------------------
+app.state.config.NOTION_CLIENT_ID = NOTION_CLIENT_ID
+app.state.config.NOTION_CLIENT_SECRET = NOTION_CLIENT_SECRET
+app.state.config.NOTION_REDIRECT_URI = NOTION_REDIRECT_URI
 
 ########################################
 #
@@ -970,6 +1002,9 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+from open_webui.routers.notion import router as notion_router
+# Mount Notion OAuth under a static path; project_id passed as query param (state)
+app.include_router(notion_router, prefix="/api/v1/notion", tags=["notion"])
 
 
 try:

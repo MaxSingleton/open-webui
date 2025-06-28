@@ -6,6 +6,7 @@ from typing import Optional
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
+from pydantic import BaseModel, ConfigDict
 
 from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
 
@@ -135,6 +136,39 @@ async def verify_tool_servers_config(
             status_code=400,
             detail=f"Failed to connect to the tool server: {str(e)}",
         )
+
+############################
+# Notion OAuth Config
+############################
+
+class NotionConfigForm(BaseModel):
+    NOTION_CLIENT_ID: str
+    NOTION_CLIENT_SECRET: str
+    NOTION_REDIRECT_URI: str
+    model_config = ConfigDict(extra="ignore")
+
+@router.get("/notion", response_model=NotionConfigForm)
+async def get_notion_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "NOTION_CLIENT_ID": request.app.state.config.NOTION_CLIENT_ID,
+        "NOTION_CLIENT_SECRET": request.app.state.config.NOTION_CLIENT_SECRET,
+        "NOTION_REDIRECT_URI": request.app.state.config.NOTION_REDIRECT_URI,
+    }
+
+@router.post("/notion", response_model=NotionConfigForm)
+async def set_notion_config(
+    request: Request,
+    form_data: NotionConfigForm,
+    user=Depends(get_admin_user)
+):
+    request.app.state.config.NOTION_CLIENT_ID = form_data.NOTION_CLIENT_ID
+    request.app.state.config.NOTION_CLIENT_SECRET = form_data.NOTION_CLIENT_SECRET
+    request.app.state.config.NOTION_REDIRECT_URI = form_data.NOTION_REDIRECT_URI
+    return {
+        "NOTION_CLIENT_ID": request.app.state.config.NOTION_CLIENT_ID,
+        "NOTION_CLIENT_SECRET": request.app.state.config.NOTION_CLIENT_SECRET,
+        "NOTION_REDIRECT_URI": request.app.state.config.NOTION_REDIRECT_URI,
+    }
 
 
 ############################

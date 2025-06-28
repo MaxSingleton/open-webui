@@ -135,7 +135,8 @@ EXPOSE 8080
 # Expose Jupyter Notebook Port
 EXPOSE 8888
 
-HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
 
 USER $UID:$GID
 

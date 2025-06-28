@@ -15,6 +15,10 @@ services:
       - 'ENABLE_OLLAMA_API=false'
       - 'USE_OLLAMA_DOCKER=false'
       - 'WEBUI_SECRET_KEY='
+      # Disable image pre-fetching / proxy so that presigned or signed URLs
+      # from private buckets are forwarded directly to OpenAI without
+      # Open WebUI trying to download/inline them first.
+      - 'OPENWEBUI_IMAGE_PROXY=off'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped

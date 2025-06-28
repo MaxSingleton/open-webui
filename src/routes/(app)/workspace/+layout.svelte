@@ -120,8 +120,8 @@
 							>
 								{$i18n.t('Tools')}
 							</a>
-						{/if}
-					</div>
+        {/if}
+        </div>
 				</div>
 
 				<!-- <div class="flex items-center text-xl font-semibold">{$i18n.t('Workspace')}</div> -->
